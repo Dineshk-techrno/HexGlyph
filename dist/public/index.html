@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>HexGlyph — Visual Cipher</title>
+
+    <meta name="theme-color" content="#060608" />
+    <meta name="msapplication-TileColor" content="#060608" />
+    <meta name="color-scheme" content="dark light" />
+
+    <link rel="icon" type="image/png"     href="/logo-icon.png" sizes="192x192" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon"          href="/logo-icon.png" />
+
+    <meta property="og:title"       content="HexGlyph — Visual Cipher" />
+    <meta property="og:description" content="Encrypt messages into secure hexagonal glyphs." />
+    <meta property="og:image"       content="/opengraph.jpg" />
+    <meta name="twitter:card"       content="summary_large_image" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!--
+      Blocking script: apply saved/system theme BEFORE first paint
+      so there is zero flash of white on page load.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("hg-theme");
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (saved === "dark" || (!saved && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-BCGVZckY.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D0ox_Xqp.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

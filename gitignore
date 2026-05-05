@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output (don't commit built files)
+dist/
+
+# Android — commit the folder, ignore build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+
+# Replit
+.replit
+replit.nix
+.replit-artifact/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+*.log

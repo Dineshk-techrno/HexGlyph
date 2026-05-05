@@ -1,0 +1,59 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1B2540"/>
+      <stop offset="100%" stop-color="#090C18"/>
+    </radialGradient>
+    <linearGradient id="sv" x1="0.1" y1="0" x2="0.1" y2="1">
+      <stop offset="0%"   stop-color="#E8EFF8"/>
+      <stop offset="28%"  stop-color="#C8D4E8"/>
+      <stop offset="70%"  stop-color="#8898B8"/>
+      <stop offset="100%" stop-color="#5C6E90"/>
+    </linearGradient>
+    <linearGradient id="sv2" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%"   stop-color="#D8E2F4"/>
+      <stop offset="45%"  stop-color="#9AAAC8"/>
+      <stop offset="100%" stop-color="#6678A0"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="mg" x="-12%" y="-12%" width="124%" height="124%">
+      <feGaussianBlur stdDeviation="1.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded-square background -->
+  <rect width="180" height="180" rx="34" fill="url(#bg)"/>
+
+  <g filter="url(#mg)">
+    <!-- H: left bar -->
+    <rect x="18" y="34" width="13" height="90" rx="2.5" fill="url(#sv)"/>
+    <!-- H: crossbar -->
+    <rect x="31" y="73" width="29" height="12" fill="url(#sv)"/>
+    <!-- H: right bar -->
+    <rect x="58" y="34" width="13" height="90" rx="2.5" fill="url(#sv)"/>
+
+    <!-- Blue pointy-top hex node, center≈(83,79) -->
+    <!-- Pointy-top: angles 90,150,210,270,330,30 degrees, r=10.5 -->
+    <polygon
+      points="83,68.5  74.9,73.75  74.9,84.25  83,89.5  91.1,84.25  91.1,73.75"
+      fill="#2A5FD8" filter="url(#glow)" opacity="0.9"/>
+    <polygon
+      points="83,68.5  74.9,73.75  74.9,84.25  83,89.5  91.1,84.25  91.1,73.75"
+      fill="#3A70EE" opacity="0.95"/>
+    <!-- highlight -->
+    <polygon points="74.9,73.75  83,77  91.1,73.75  83,68.5" fill="#90B8FF" opacity="0.55"/>
+
+    <!-- G: flat-top hexagon stroke, center(130,79), r=38 -->
+    <!-- flat-top vertices: 0°=right, 60°=top-right, 120°=top-left, 180°=left, 240°=btm-left, 300°=btm-right -->
+    <!-- right=(168,79) top-right=(149,46) top-left=(111,46) left=(92,79) btm-left=(111,112) btm-right=(149,112) -->
+    <!-- path: top-right→top-left→left→btm-left→btm-right→right(open)→spur inward -->
+    <path
+      d="M 149,46 L 111,46 L 92,79 L 111,112 L 149,112 L 168,79 L 143,79"
+      stroke="url(#sv2)" stroke-width="12.5" fill="none"
+      stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+</svg>
