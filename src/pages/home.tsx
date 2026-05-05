@@ -1,3 +1,4 @@
+import { Camera } from '@capacitor/camera';
 import { useState, useRef, useEffect, useCallback } from "react";
 import { encodeFull, decodeFull, maxPlaintextBytes, runSelfTest } from "@/lib/cryptoengine";
 import { renderGlyphSVG, downloadSVG, downloadPNG } from "@/lib/gridrenderer";
@@ -141,7 +142,42 @@ export default function Home() {
 
   const isSecure = typeof window !== "undefined" && window.isSecureContext;
   const [selfTest, setSelfTest] = useState<{ ok: boolean; detail: string } | null>(null);
+const handleCameraScan = async () => {
+  try {
+    await Camera.requestPermissions();
 
+    const photo = await Camera.getPhoto({
+      quality: 90,
+      resultType: 'base64',
+      source: 'camera'
+    });
+
+    if (!photo.base64String) {
+      throw new Error("No image captured");
+    }
+
+    const img = new Image();
+    img.src = `data:image/jpeg;base64,${photo.base64String}`;
+
+    img.onload = async () => {
+      try {
+        setIsDecoding(true);
+        setDecodeError("");
+
+        const result = await scanImage(img);
+
+        setDecodedMessage(result);
+      } catch (err: any) {
+        setDecodeError(err?.message || "Decoding failed");
+      } finally {
+        setIsDecoding(false);
+      }
+    };
+
+  } catch (err: any) {
+    setDecodeError(err?.message || "Camera failed");
+  }
+};
   useEffect(() => {
     setEncodeCode(generateCode());
     setDecodeCode(generateCode());
