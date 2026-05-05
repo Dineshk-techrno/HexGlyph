@@ -3,8 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -17,18 +15,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Fix npm version
-        run: npm install -g npm@9
+      - name: Install pnpm
+        run: npm install -g pnpm
 
-      - name: Clean install dependencies
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Ensure TypeScript
-        run: npm install -D typescript
+        run: pnpm add -D typescript
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -40,7 +36,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build web app
-        run: npm run build
+        run: pnpm build
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -56,4 +52,3 @@ jobs:
         with:
           name: HexGlyph-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
