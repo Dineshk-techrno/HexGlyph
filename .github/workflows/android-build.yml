@@ -19,7 +19,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup Java JDK 17
+      - name: Fix npm version
+        run: npm install -g npm@9
+
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
+
+      - name: Ensure TypeScript
+        run: npm install -D typescript
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -28,16 +39,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Install TypeScript (Capacitor requirement)
-        run: npm install -D typescript
-
-      - name: Build Vite app
+      - name: Build web app
         run: npm run build
 
-      - name: Sync Capacitor Android
+      - name: Sync Capacitor
         run: npx cap sync android
 
       - name: Make gradlew executable
@@ -46,7 +51,7 @@ jobs:
       - name: Build Debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HexGlyph-debug-apk
