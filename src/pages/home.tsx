@@ -1,4 +1,3 @@
-import { Camera } from '@capacitor/camera';
 import { useState, useRef, useEffect, useCallback } from "react";
 import { encodeFull, decodeFull, maxPlaintextBytes, runSelfTest } from "@/lib/cryptoengine";
 import { renderGlyphSVG, downloadSVG, downloadPNG } from "@/lib/gridrenderer";
@@ -23,8 +22,11 @@ const WORDS = ["COBRA","RAVEN","DELTA","STORM","ECHO","FALCON","GHOST","HYDRA","
   "JADE","KILO","LIMA","NOVA","ORBIT","PRIME","QUARTZ","SIGMA","TITAN","ULTRA",
   "VIPER","WHISKEY","XRAY","YANKEE","ZERO"];
 
+let wordIndex = 0;
+
 function generateCode() {
-  const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+  const word = WORDS[wordIndex % WORDS.length];
+  wordIndex++;
   return `${word}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 }
 
@@ -99,7 +101,6 @@ function LoadingDots() {
   );
 }
 
-/* ── Rotating camera-lens spinner ── */
 function CameraLoader({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-6">
@@ -130,54 +131,18 @@ export default function Home() {
   const [decodedMessage, setDecodedMessage] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // camera states
   const [isCameraActive,  setIsCameraActive]  = useState(false);
-  const [isCameraLoading, setIsCameraLoading] = useState(false);  // warmup
-  const [isCameraReady,   setIsCameraReady]   = useState(false);  // first frame received
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [isCameraReady,   setIsCameraReady]   = useState(false);
 
-  const videoRef    = useRef<HTMLVideoElement>(null);
-  const streamRef   = useRef<MediaStream | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoRef         = useRef<HTMLVideoElement>(null);
+  const streamRef        = useRef<MediaStream | null>(null);
+  const photoInputRef    = useRef<HTMLInputElement>(null);
   const cameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSecure = typeof window !== "undefined" && window.isSecureContext;
   const [selfTest, setSelfTest] = useState<{ ok: boolean; detail: string } | null>(null);
-const handleCameraScan = async () => {
-  try {
-    await Camera.requestPermissions();
 
-    const photo = await Camera.getPhoto({
-      quality: 90,
-      resultType: 'base64',
-      source: 'camera'
-    });
-
-    if (!photo.base64String) {
-      throw new Error("No image captured");
-    }
-
-    const img = new Image();
-    img.src = `data:image/jpeg;base64,${photo.base64String}`;
-
-    img.onload = async () => {
-      try {
-        setIsDecoding(true);
-        setDecodeError("");
-
-        const result = await scanImage(img);
-
-        setDecodedMessage(result);
-      } catch (err: any) {
-        setDecodeError(err?.message || "Decoding failed");
-      } finally {
-        setIsDecoding(false);
-      }
-    };
-
-  } catch (err: any) {
-    setDecodeError(err?.message || "Camera failed");
-  }
-};
   useEffect(() => {
     setEncodeCode(generateCode());
     setDecodeCode(generateCode());
@@ -189,7 +154,7 @@ const handleCameraScan = async () => {
   /* ─── Encode ─── */
   const handleEncode = async () => {
     setEncodeError(""); setGlyphSvg(null);
-    if (!plaintext)  { setEncodeError("Message cannot be empty."); return; }
+    if (!plaintext) { setEncodeError("Message cannot be empty."); return; }
     if (useEncodeCode && !encodeCode) { setEncodeError("Group Code is required when enabled."); return; }
     setIsEncoding(true);
     try {
@@ -202,10 +167,11 @@ const handleCameraScan = async () => {
   };
 
   const handleDownloadSVG = async () => {
-  if (!glyphSvg) return;
-  try { await downloadSVG(glyphSvg); }
-  catch (err: unknown) { setEncodeError("SVG save failed: " + (err as Error).message); }
+    if (!glyphSvg) return;
+    try { await downloadSVG(glyphSvg); }
+    catch (err: unknown) { setEncodeError("SVG save failed: " + (err as Error).message); }
   };
+
   const handleDownloadPNG = async () => {
     if (!glyphSvg) return;
     try { await downloadPNG(glyphSvg); }
@@ -224,7 +190,6 @@ const handleCameraScan = async () => {
   };
 
   const handleVideoReady = () => {
-    // called when first frame arrives
     if (cameraTimeoutRef.current) clearTimeout(cameraTimeoutRef.current);
     setIsCameraLoading(false);
     setIsCameraReady(true);
@@ -233,16 +198,13 @@ const handleCameraScan = async () => {
   const startCamera = async () => {
     setDecodeError(""); setDecodedMessage("");
     if (!isSecure || !navigator.mediaDevices?.getUserMedia) {
-      setDecodeError(
-        "Live camera needs HTTPS. Use \"Take Photo\" or \"Load Image\" instead."
-      );
+      setDecodeError("Live camera needs HTTPS. Use \"Take Photo\" or \"Load Image\" instead.");
       return;
     }
     setIsCameraLoading(true);
     setIsCameraActive(true);
     setIsCameraReady(false);
 
-    // Timeout: if camera doesn't produce a frame in 10s, show error
     cameraTimeoutRef.current = setTimeout(() => {
       stopCamera();
       setDecodeError("Camera took too long to start. Try 'Take Photo' or 'Load Image' instead.");
@@ -255,7 +217,6 @@ const handleCameraScan = async () => {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // play() to start the stream immediately
         videoRef.current.play().catch(() => {});
       }
     } catch (err: unknown) {
@@ -319,8 +280,6 @@ const handleCameraScan = async () => {
 
       {/* ── Logo header ── */}
       <div className="w-full max-w-2xl mb-8 flex flex-col items-center">
-
-        {/* Dashboard logo */}
         <div className="mb-4 flex items-center justify-center w-full">
           <img
             src="/logo-horizontal-transparent.png"
@@ -341,7 +300,6 @@ const handleCameraScan = async () => {
           Keys rotate at UTC midnight · Max message: {MAX_CHARS} bytes
         </p>
 
-        {/* Crypto self-test badge */}
         <div className="mt-3 flex items-center gap-2 text-xs px-3 py-1 rounded border border-border bg-muted/20">
           {selfTest === null ? (
             <span className="text-muted-foreground flex items-center gap-2">
@@ -413,13 +371,10 @@ const handleCameraScan = async () => {
                 />
               </div>
 
-              {/* ── Encode Mode Selector ── */}
               <div className="space-y-3">
                 <Label className="text-muted-foreground font-semibold tracking-wide uppercase text-xs">
                   Glyph Mode
                 </Label>
-
-                {/* Mode toggle row */}
                 <div className="grid grid-cols-2 gap-0 border border-border">
                   <button
                     type="button"
@@ -451,7 +406,6 @@ const handleCameraScan = async () => {
                   </button>
                 </div>
 
-                {/* Mode body */}
                 {!useEncodeCode ? (
                   <div className="flex items-start gap-3 border border-[#00e5a0]/20 bg-[#00e5a0]/5 px-4 py-3 animate-in fade-in duration-200">
                     <Globe className="w-4 h-4 text-[#00e5a0]/70 mt-0.5 flex-shrink-0" />
@@ -541,13 +495,10 @@ const handleCameraScan = async () => {
             </CardHeader>
 
             <CardContent className="pt-6 space-y-6">
-              {/* ── Decode Mode Selector ── */}
               <div className="space-y-3">
                 <Label className="text-muted-foreground font-semibold tracking-wide uppercase text-xs">
                   Glyph Mode
                 </Label>
-
-                {/* Mode toggle row */}
                 <div className="grid grid-cols-2 gap-0 border border-border">
                   <button
                     type="button"
@@ -579,7 +530,6 @@ const handleCameraScan = async () => {
                   </button>
                 </div>
 
-                {/* Mode body */}
                 {!useDecodeCode ? (
                   <div className="flex items-start gap-3 border border-[#00e5a0]/20 bg-[#00e5a0]/5 px-4 py-3 animate-in fade-in duration-200">
                     <Globe className="w-4 h-4 text-[#00e5a0]/70 mt-0.5 flex-shrink-0" />
@@ -606,17 +556,13 @@ const handleCameraScan = async () => {
                 )}
               </div>
 
-              {/* ── Camera active: full-width view ── */}
               {isCameraActive ? (
                 <div className="relative w-full border border-[#a78bfa]/40 bg-black overflow-hidden">
-                  {/* Loading overlay — shown until first frame */}
                   {isCameraLoading && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80">
                       <CameraLoader label="Preparing camera…" />
                     </div>
                   )}
-
-                  {/* Video feed */}
                   <video
                     ref={videoRef}
                     autoPlay playsInline muted
@@ -624,8 +570,6 @@ const handleCameraScan = async () => {
                     className="w-full object-cover"
                     style={{ maxHeight: "340px", minHeight: "220px" }}
                   />
-
-                  {/* Scan-guide crosshair overlay */}
                   {isCameraReady && (
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                       <div className="w-40 h-40 border-2 border-[#a78bfa]/60 rounded-sm relative">
@@ -646,8 +590,6 @@ const handleCameraScan = async () => {
                       </div>
                     </div>
                   )}
-
-                  {/* Action bar */}
                   <div className="flex gap-0 border-t border-[#a78bfa]/30">
                     <Button onClick={handleCaptureAndDecode}
                       disabled={isDecoding || !isCameraReady || (useDecodeCode && !decodeCode)}
@@ -665,9 +607,7 @@ const handleCameraScan = async () => {
                   </div>
                 </div>
               ) : (
-                /* ── Camera idle: 2-col tile layout ── */
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Camera tile */}
                   <div className="border border-border bg-background p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] text-center">
                     <div className="p-3 bg-muted rounded-full text-[#a78bfa]">
                       <Camera className="w-6 h-6" />
@@ -696,7 +636,6 @@ const handleCameraScan = async () => {
                     </Button>
                   </div>
 
-                  {/* File drop tile */}
                   <div className="border border-dashed border-border bg-background p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] text-center group hover:border-[#a78bfa]/50 transition-colors"
                     data-testid="drop-zone">
                     <div className="p-3 bg-muted rounded-full text-foreground group-hover:text-[#a78bfa] transition-colors">
@@ -755,8 +694,6 @@ const handleCameraScan = async () => {
                 <div key={decodedMessage} className="border bg-[#a78bfa]/5 animate-in slide-in-from-top-4 fade-in duration-300"
                   style={{ borderColor: pmeta.color + "55" }}
                   data-testid="decoded-result">
-
-                  {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b"
                     style={{ borderColor: pmeta.color + "33", backgroundColor: pmeta.color + "0d" }}>
                     <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm"
@@ -769,213 +706,11 @@ const handleCameraScan = async () => {
                       <Check className="w-3 h-3" /> Decrypted
                     </div>
                   </div>
-
-                  {/* Payload preview */}
                   <div className="px-4 pt-4 pb-3">
                     <div className="font-mono text-xs break-all bg-muted/30 border border-border px-3 py-2 text-muted-foreground whitespace-pre-wrap leading-relaxed">
                       {decodedMessage.trim()}
                     </div>
                   </div>
-
-                  {/* Action buttons */}
-                  <div className="px-4 pb-4 flex gap-2">
-                    <Button
-                      onClick={() => triggerPayload(decodedMessage)}
-                      className="flex-1 rounded-none h-11 uppercase font-bold tracking-widest text-sm text-black"
-                      style={{ backgroundColor: pmeta.color }}
-                      data-testid="button-payload-action">
-                      {typeIcon[ptype]}
-                      <span className="ml-2">{pmeta.action}</span>
-                    </Button>
-                    <Button
-                      onClick={handleCopy}
-                      variant="outline"
-                      className="rounded-none h-11 w-11 flex-shrink-0 border-border hover:border-[#a78bfa]/50 hover:bg-[#a78bfa]/10 hover:text-[#a78bfa]"
-                      title="Copy to clipboard"
-                      data-testid="button-copy-payload">
-                      {copied ? <Check className="w-4 h-4 text-[#00e5a0]" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-              {/* ── Camera active: full-width view ── */}
-              {isCameraActive ? (
-                <div className="relative w-full border border-[#a78bfa]/40 bg-black overflow-hidden">
-                  {/* Loading overlay — shown until first frame */}
-                  {isCameraLoading && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80">
-                      <CameraLoader label="Preparing camera…" />
-                    </div>
-                  )}
-
-                  {/* Video feed */}
-                  <video
-                    ref={videoRef}
-                    autoPlay playsInline muted
-                    onLoadedMetadata={handleVideoReady}
-                    className="w-full object-cover"
-                    style={{ maxHeight: "340px", minHeight: "220px" }}
-                  />
-
-                  {/* Scan-guide crosshair overlay */}
-                  {isCameraReady && (
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-40 h-40 border-2 border-[#a78bfa]/60 rounded-sm relative">
-                        {/* corner marks */}
-                        {["-top-px -left-px","  -top-px -right-px","-bottom-px -left-px","-bottom-px -right-px"].map((_, i) => (
-                          <span key={i} className="absolute w-3 h-3 border-[#a78bfa]"
-                            style={{
-                              top:    i < 2 ? -2 : "auto", bottom: i >= 2 ? -2 : "auto",
-                              left:   i%2===0 ? -2 : "auto", right: i%2===1 ? -2 : "auto",
-                              borderTopWidth:    i < 2  ? 2 : 0,
-                              borderBottomWidth: i >= 2 ? 2 : 0,
-                              borderLeftWidth:   i%2===0 ? 2 : 0,
-                              borderRightWidth:  i%2===1 ? 2 : 0,
-                            }} />
-                        ))}
-                        <span className="absolute -top-6 left-0 right-0 text-center text-[10px] text-[#a78bfa]/80 tracking-widest uppercase font-mono">
-                          Aim at glyph
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action bar */}
-                  <div className="flex gap-0 border-t border-[#a78bfa]/30">
-                    <Button onClick={handleCaptureAndDecode}
-                      disabled={isDecoding || !isCameraReady || (useDecodeCode && !decodeCode)}
-                      className="flex-1 rounded-none h-12 bg-[#a78bfa] hover:bg-[#a78bfa]/90 text-black font-bold uppercase tracking-widest text-sm"
-                      data-testid="button-scan">
-                      {isDecoding
-                        ? <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" />Scanning…</span>
-                        : <span className="flex items-center gap-2"><Camera className="w-4 h-4" />Scan Glyph</span>}
-                    </Button>
-                    <Button onClick={stopCamera} variant="destructive"
-                      className="rounded-none px-5 h-12 text-sm font-semibold"
-                      data-testid="button-stop-camera">
-                      Stop
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                /* ── Camera idle: 2-col tile layout ── */
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Camera tile */}
-                  <div className="border border-border bg-background p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] text-center">
-                    <div className="p-3 bg-muted rounded-full text-[#a78bfa]">
-                      <Camera className="w-6 h-6" />
-                    </div>
-                    <div className="text-sm font-semibold uppercase tracking-wide">Camera Scan</div>
-                    {!isSecure && (
-                      <p className="text-xs text-amber-400 flex items-center gap-1 px-1">
-                        <ShieldAlert className="w-3 h-3 flex-shrink-0" />
-                        HTTPS required for live camera
-                      </p>
-                    )}
-                    <Button onClick={startCamera}
-                      className="rounded-none w-full text-xs bg-[#a78bfa] hover:bg-[#a78bfa]/90 text-black font-semibold h-9"
-                      data-testid="button-start-camera">
-                      Start Camera
-                    </Button>
-                    <input ref={photoInputRef} type="file" accept="image/*"
-                      capture="environment" className="hidden"
-                      onChange={handleFileUpload} disabled={isDecoding}
-                      data-testid="input-photo-capture" />
-                    <Button variant="outline"
-                      className="rounded-none w-full text-xs border-[#a78bfa]/30 hover:border-[#a78bfa] hover:bg-[#a78bfa]/10 hover:text-[#a78bfa] h-9"
-                      onClick={() => photoInputRef.current?.click()}
-                      disabled={isDecoding} data-testid="button-take-photo">
-                      <Smartphone className="w-3 h-3 mr-1" /> Take Photo
-                    </Button>
-                  </div>
-
-                  {/* File drop tile */}
-                  <div className="border border-dashed border-border bg-background p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] text-center group hover:border-[#a78bfa]/50 transition-colors"
-                    data-testid="drop-zone">
-                    <div className="p-3 bg-muted rounded-full text-foreground group-hover:text-[#a78bfa] transition-colors">
-                      <FileImage className="w-6 h-6" />
-                    </div>
-                    <div className="text-sm font-semibold uppercase tracking-wide">Image File</div>
-                    <p className="text-xs text-muted-foreground px-2">Drag & Drop or Click<br/>(PNG, JPG, SVG)</p>
-                    <div className="w-full">
-                      <input type="file" id="file-upload" className="hidden"
-                        accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml"
-                        onChange={handleFileUpload} disabled={isDecoding}
-                        data-testid="input-file-upload" />
-                      <Button asChild
-                        className="rounded-none w-full text-xs cursor-pointer bg-[#a78bfa]/15 hover:bg-[#a78bfa]/25 text-[#a78bfa] border border-[#a78bfa]/30 hover:border-[#a78bfa]/60 h-9">
-                        <label htmlFor="file-upload">
-                          {isDecoding
-                            ? <><RefreshCw className="w-4 h-4 animate-spin mr-2" />Scanning…</>
-                            : <><Upload className="w-4 h-4 mr-2" />Load Image</>}
-                        </label>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {decodeError && (
-                <Alert variant="destructive" className="rounded-none border-destructive/50 bg-destructive/10">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Decoding Failed</AlertTitle>
-                  <AlertDescription className="font-mono text-sm">{decodeError}</AlertDescription>
-                </Alert>
-              )}
-
-              {decodedMessage && (() => {
-                const ptype  = detectPayloadType(decodedMessage);
-                const pmeta  = PAYLOAD_META[ptype];
-                const typeIcon: Record<PayloadType, React.ReactNode> = {
-                  url:      <ExternalLink className="w-4 h-4" />,
-                  email:    <Mail        className="w-4 h-4" />,
-                  phone:    <Phone       className="w-4 h-4" />,
-                  sms:      <MessageSquare className="w-4 h-4" />,
-                  geo:      <MapPin      className="w-4 h-4" />,
-                  wifi:     <Wifi        className="w-4 h-4" />,
-                  vcard:    <User        className="w-4 h-4" />,
-                  calendar: <CalendarDays className="w-4 h-4" />,
-                  upi:      <CreditCard  className="w-4 h-4" />,
-                  text:     <FileText    className="w-4 h-4" />,
-                };
-                const handleCopy = () => {
-                  navigator.clipboard?.writeText(decodedMessage.trim()).then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  });
-                };
-                return (
-                <div className="border bg-[#a78bfa]/5 animate-in slide-in-from-top-4 fade-in duration-300"
-                  style={{ borderColor: pmeta.color + "55" }}
-                  data-testid="decoded-result">
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b"
-                    style={{ borderColor: pmeta.color + "33", backgroundColor: pmeta.color + "0d" }}>
-                    <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm"
-                      style={{ color: pmeta.color }}>
-                      {typeIcon[ptype]}
-                      {pmeta.label}
-                    </div>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold uppercase tracking-widest border"
-                      style={{ color: pmeta.color, borderColor: pmeta.color + "44", backgroundColor: pmeta.color + "15" }}>
-                      <Check className="w-3 h-3" /> Decrypted
-                    </div>
-                  </div>
-
-                  {/* Payload preview */}
-                  <div className="px-4 pt-4 pb-3">
-                    <div className="font-mono text-xs break-all bg-muted/30 border border-border px-3 py-2 text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {decodedMessage.trim()}
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
                   <div className="px-4 pb-4 flex gap-2">
                     <Button
                       onClick={() => triggerPayload(decodedMessage)}
@@ -1003,4 +738,4 @@ const handleCameraScan = async () => {
       </Tabs>
     </div>
   );
-}
+    }
