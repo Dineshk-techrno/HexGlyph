@@ -201,7 +201,11 @@ const handleCameraScan = async () => {
     } finally { setIsEncoding(false); }
   };
 
-  const handleDownloadSVG = () => { if (glyphSvg) downloadSVG(glyphSvg); };
+  const handleDownloadSVG = async () => {
+  if (!glyphSvg) return;
+  try { await downloadSVG(glyphSvg); }
+  catch (err: unknown) { setEncodeError("SVG save failed: " + (err as Error).message); }
+  };
   const handleDownloadPNG = async () => {
     if (!glyphSvg) return;
     try { await downloadPNG(glyphSvg); }
