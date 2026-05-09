@@ -30,7 +30,6 @@ export function renderGlyphSVG(payload: Uint8Array): string {
   const gridW = Math.ceil(maxX - minX) + PADDING * 2;
   const gridH = Math.ceil(maxY - minY) + PADDING * 2;
 
-  // Always emit a square SVG so the scan engine can use a single scale factor.
   const squareSize = Math.max(gridW, gridH);
   const extraX = Math.floor((squareSize - gridW) / 2);
   const extraY = Math.floor((squareSize - gridH) / 2);
@@ -83,7 +82,20 @@ export async function svgToPng(svgString: string, maxSize = 1024): Promise<strin
   });
 }
 
-export function downloadSVG(svgString: string, filename = "hexglyph.svg"): void {
+function isNative(): boolean {
+  return !!(window as any).Capacitor?.isNativePlatform?.();
+}
+
+export async function downloadSVG(svgString: string, filename = "hexglyph.svg"): Promise<void> {
+  if (isNative()) {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    await Filesystem.writeFile({
+      path: filename,
+      data: btoa(unescape(encodeURIComponent(svgString))),
+      directory: Directory.Documents,
+    });
+    return;
+  }
   const blob = new Blob([svgString], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -97,6 +109,16 @@ export function downloadSVG(svgString: string, filename = "hexglyph.svg"): void 
 
 export async function downloadPNG(svgString: string, filename = "hexglyph.png", maxSize = 1024): Promise<void> {
   const dataUrl = await svgToPng(svgString, maxSize);
+  if (isNative()) {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    const base64 = dataUrl.split(",")[1];
+    await Filesystem.writeFile({
+      path: filename,
+      data: base64,
+      directory: Directory.Documents,
+    });
+    return;
+  }
   const a = document.createElement("a");
   a.href = dataUrl;
   a.download = filename;
