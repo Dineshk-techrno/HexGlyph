@@ -125,21 +125,6 @@ export async function downloadSVG(
   filename = "hexglyph.svg"
 ): Promise<void> {
 
-  if (isNative()) {
-
-    const { Filesystem, Directory } = await import("@capacitor/filesystem");
-
-    await Filesystem.writeFile({
-      path: filename,
-      data: btoa(unescape(encodeURIComponent(svgString))),
-
-      // FIXED HERE
-      directory: Directory.Data,
-    });
-
-    return;
-  }
-
   const blob = new Blob([svgString], {
     type: "image/svg+xml",
   });
@@ -168,23 +153,6 @@ export async function downloadPNG(
 
   const dataUrl = await svgToPng(svgString, maxSize);
 
-  if (isNative()) {
-
-    const { Filesystem, Directory } = await import("@capacitor/filesystem");
-
-    const base64 = dataUrl.split(",")[1];
-
-    await Filesystem.writeFile({
-      path: filename,
-      data: base64,
-
-      // FIXED HERE
-      directory: Directory.Data,
-    });
-
-    return;
-  }
-
   const a = document.createElement("a");
 
   a.href = dataUrl;
@@ -195,4 +163,4 @@ export async function downloadPNG(
   a.click();
 
   document.body.removeChild(a);
-    }
+      }
