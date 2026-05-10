@@ -10,7 +10,9 @@ const BG_COLOR = "#0F0F1A";
 
 export function renderGlyphSVG(payload: Uint8Array): string {
   const cellMap = mapBitsToCells(payload);
+
   const cellBits = new Map<string, number>();
+
   for (const { cell, bit } of cellMap) {
     cellBits.set(`${cell.q},${cell.r}`, bit);
   }
@@ -18,9 +20,14 @@ export function renderGlyphSVG(payload: Uint8Array): string {
   const allCells = spiralCells(GRID_RADIUS);
   const cornerSize = CELL_SIZE * 0.9;
 
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
   for (const cell of allCells) {
     const { x, y } = axialToPixel(cell.q, cell.r, CELL_SIZE);
+
     if (x - cornerSize < minX) minX = x - cornerSize;
     if (x + cornerSize > maxX) maxX = x + cornerSize;
     if (y - cornerSize < minY) minY = y - cornerSize;
@@ -31,6 +38,7 @@ export function renderGlyphSVG(payload: Uint8Array): string {
   const gridH = Math.ceil(maxY - minY) + PADDING * 2;
 
   const squareSize = Math.max(gridW, gridH);
+
   const extraX = Math.floor((squareSize - gridW) / 2);
   const extraY = Math.floor((squareSize - gridH) / 2);
 
@@ -38,17 +46,22 @@ export function renderGlyphSVG(payload: Uint8Array): string {
   const cy = -minY + PADDING + extraY;
 
   let svgCells = "";
+
   for (const cell of allCells) {
     const { x, y } = axialToPixel(cell.q, cell.r, CELL_SIZE);
+
     const px = cx + x;
     const py = cy + y;
+
     const pts = hexCorners(px, py, cornerSize);
 
     if (isAnchor(cell)) {
       svgCells += `<polygon points="${pts}" fill="${ANCHOR_COLOR}" />`;
     } else {
       const bit = cellBits.get(`${cell.q},${cell.r}`) ?? 0;
+
       const fill = bit === 1 ? LIT_COLOR : DARK_COLOR;
+
       svgCells += `<polygon points="${pts}" fill="${fill}" />`;
     }
   }
@@ -60,24 +73,45 @@ export function renderGlyphSVG(payload: Uint8Array): string {
 </svg>`;
 }
 
-export async function svgToPng(svgString: string, maxSize = 1024): Promise<string> {
+export async function svgToPng(
+  svgString: string,
+  maxSize = 1024
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const blob = new Blob([svgString], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+
     const url = URL.createObjectURL(blob);
+
     const img = new Image();
+
     img.onload = () => {
-      const svgW = img.naturalWidth  || img.width  || maxSize;
+      const svgW = img.naturalWidth || img.width || maxSize;
       const svgH = img.naturalHeight || img.height || maxSize;
+
       const scale = Math.min(maxSize / svgW, maxSize / svgH);
+
       const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(svgW * scale);
+
+      canvas.width = Math.round(svgW * scale);
       canvas.height = Math.round(svgH * scale);
+
       const ctx = canvas.getContext("2d")!;
+
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
       URL.revokeObjectURL(url);
+
       resolve(canvas.toDataURL("image/png"));
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to render SVG to PNG")); };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+
+      reject(new Error("Failed to render SVG to PNG"));
+    };
+
     img.src = url;
   });
 }
@@ -86,43 +120,79 @@ function isNative(): boolean {
   return !!(window as any).Capacitor?.isNativePlatform?.();
 }
 
-export async function downloadSVG(svgString: string, filename = "hexglyph.svg"): Promise<void> {
+export async function downloadSVG(
+  svgString: string,
+  filename = "hexglyph.svg"
+): Promise<void> {
+
   if (isNative()) {
+
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
+
     await Filesystem.writeFile({
       path: filename,
       data: btoa(unescape(encodeURIComponent(svgString))),
-      directory: Directory.Documents,
+
+      // FIXED HERE
+      directory: Directory.Data,
     });
+
     return;
   }
-  const blob = new Blob([svgString], { type: "image/svg+xml" });
+
+  const blob = new Blob([svgString], {
+    type: "image/svg+xml",
+  });
+
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
+
   a.href = url;
   a.download = filename;
+
   document.body.appendChild(a);
+
   a.click();
+
   document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
 
-export async function downloadPNG(svgString: string, filename = "hexglyph.png", maxSize = 1024): Promise<void> {
+export async function downloadPNG(
+  svgString: string,
+  filename = "hexglyph.png",
+  maxSize = 1024
+): Promise<void> {
+
   const dataUrl = await svgToPng(svgString, maxSize);
+
   if (isNative()) {
+
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
+
     const base64 = dataUrl.split(",")[1];
+
     await Filesystem.writeFile({
       path: filename,
       data: base64,
-      directory: Directory.Documents,
+
+      // FIXED HERE
+      directory: Directory.Data,
     });
+
     return;
   }
+
   const a = document.createElement("a");
+
   a.href = dataUrl;
   a.download = filename;
+
   document.body.appendChild(a);
+
   a.click();
+
   document.body.removeChild(a);
-}
+    }
